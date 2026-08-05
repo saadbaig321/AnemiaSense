@@ -128,7 +128,17 @@ html, body, [class*="css"]  {
 }
 .kpi-tip { color: rgba(255,255,255,0.72); font-size: 11px; margin-top: 7px; line-height: 1.35; }
 
-.kpi-card-muted { filter: grayscale(0.55) brightness(0.85); border: 1px dashed rgba(255,255,255,0.35); }
+.kpi-card-muted { filter: grayscale(0.35) brightness(0.92) saturate(0.8); border: 1px dashed rgba(255,255,255,0.4); }
+.gradient-heading {
+    font-size: 26px;
+    font-weight: 800;
+    margin: 18px 0 6px 0;
+    background: linear-gradient(90deg, #00d2ff, #7b5cff, #ff6a88, #ffb14e);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    display: inline-block;
+}
 .kpi-badge {
     display: inline-block;
     font-size: 10.5px;
@@ -758,7 +768,7 @@ with tab1:
             if abs(prob_class1 - best_threshold) < 0.05:
                 st.warning("This prediction is close to the decision boundary - treat as uncertain.")
 
-        st.subheader("Why the model called it this way")
+        st.markdown('<div class="gradient-heading">Why the model called it this way</div>', unsafe_allow_html=True)
         total_dist = dist_to_anemic + dist_to_healthy
         color_lean_pct = (1 - dist_to_anemic / total_dist) * 100 if total_dist > 0 else 50
         explanation = (
@@ -778,7 +788,7 @@ with tab1:
 
         # ---- Approximate CBC panel (only if the regression model was trained) ----
         if reg_model is not None and reg_meta is not None:
-            st.subheader("\U0001F9EA Estimated CBC panel (approximate)")
+            st.markdown('<div class="gradient-heading">\U0001F9EA Estimated CBC panel (approximate)</div>', unsafe_allow_html=True)
             st.caption(
                 "Estimated from this image by a separate model trained on the dataset's real CBC reports. "
                 "These are NOT real lab values - always shown with the model's actual measured error margin. "
@@ -796,19 +806,21 @@ with tab1:
             # Same colorful card language as the KPI section up top - one
             # signature gradient + icon per CBC field, so this panel reads
             # as part of the same visual system instead of a flat gray afterthought.
+            # Punchier, more saturated 3-stop gradients (with a matching glow
+            # color) so this panel pops the same way the KPI cards up top do.
             CBC_STYLE = {
-                "Hemoglobin": ("\U0001FA78", "linear-gradient(135deg,#0f9b8e,#0c6e64)", "g/dL \u00b7 oxygen-carrying protein in red cells"),
-                "RBC":        ("\U0001F534", "linear-gradient(135deg,#1f77b4,#154a73)", "million/\u00b5L \u00b7 red blood cell count"),
-                "WBC":        ("\U0001F6E1\ufe0f", "linear-gradient(135deg,#d97732,#8f431b)", "thousand/\u00b5L \u00b7 white blood cell (immune) count"),
-                "Hematocrit": ("\U0001F4A7", "linear-gradient(135deg,#8e44ad,#5b2c6f)", "% \u00b7 blood volume made up of red cells"),
-                "Platelets":  ("\U0001F9EB", "linear-gradient(135deg,#c2185b,#6a1b3d)", "thousand/\u00b5L \u00b7 cell fragments that help clotting"),
-                "MCV":        ("\U0001F4CF", "linear-gradient(135deg,#2563eb,#1e3a8a)", "fL \u00b7 average size of a single red blood cell"),
-                "MCH":        ("\U0001F9EC", "linear-gradient(135deg,#334155,#172033)", "pg \u00b7 average hemoglobin per red blood cell"),
-                "MCHC":       ("\u2696\ufe0f", "linear-gradient(135deg,#b7354a,#712335)", "g/dL \u00b7 hemoglobin concentration in red cells"),
-                "RDW-CV":     ("\U0001F4CA", "linear-gradient(135deg,#16a34a,#166534)", "% \u00b7 variation in red blood cell size"),
-                "MPV":        ("\U0001F52C", "linear-gradient(135deg,#ca8a04,#78350f)", "fL \u00b7 average platelet size"),
+                "Hemoglobin": ("\U0001FA78", "linear-gradient(135deg,#00e0b8,#00997a,#046e5a)", "#00e0b8", "g/dL \u00b7 oxygen-carrying protein in red cells"),
+                "RBC":        ("\U0001F534", "linear-gradient(135deg,#3aa0ff,#1f77b4,#0d4a80)", "#3aa0ff", "million/\u00b5L \u00b7 red blood cell count"),
+                "WBC":        ("\U0001F6E1\ufe0f", "linear-gradient(135deg,#ffb14e,#e2792b,#8f431b)", "#ffb14e", "thousand/\u00b5L \u00b7 white blood cell (immune) count"),
+                "Hematocrit": ("\U0001F4A7", "linear-gradient(135deg,#c084fc,#9b3dd1,#5b2c6f)", "#c084fc", "% \u00b7 blood volume made up of red cells"),
+                "Platelets":  ("\U0001F9EB", "linear-gradient(135deg,#ff5c9e,#c2185b,#6a1b3d)", "#ff5c9e", "thousand/\u00b5L \u00b7 cell fragments that help clotting"),
+                "MCV":        ("\U0001F4CF", "linear-gradient(135deg,#5b8dff,#2563eb,#1e3a8a)", "#5b8dff", "fL \u00b7 average size of a single red blood cell"),
+                "MCH":        ("\U0001F9EC", "linear-gradient(135deg,#7dd3fc,#334155,#172033)", "#7dd3fc", "pg \u00b7 average hemoglobin per red blood cell"),
+                "MCHC":       ("\u2696\ufe0f", "linear-gradient(135deg,#ff6a88,#b7354a,#712335)", "#ff6a88", "g/dL \u00b7 hemoglobin concentration in red cells"),
+                "RDW-CV":     ("\U0001F4CA", "linear-gradient(135deg,#4ade80,#16a34a,#166534)", "#4ade80", "% \u00b7 variation in red blood cell size"),
+                "MPV":        ("\U0001F52C", "linear-gradient(135deg,#fbbf24,#ca8a04,#78350f)", "#fbbf24", "fL \u00b7 average platelet size"),
             }
-            DEFAULT_STYLE = ("\U0001F9EA", "linear-gradient(135deg,#475569,#1e293b)", "")
+            DEFAULT_STYLE = ("\U0001F9EA", "linear-gradient(135deg,#64748b,#475569,#1e293b)", "#94a3b8", "")
 
             for row_start in range(0, len(target_fields), 3):
                 cbc_cols = st.columns(3)
@@ -817,16 +829,17 @@ with tab1:
                     mae = field_mae.get(f, None)
                     r2 = field_r2.get(f, None)
                     reliable = r2 is not None and r2 > 0.3
-                    icon, grad, unit_note = CBC_STYLE.get(f, DEFAULT_STYLE)
+                    icon, grad, glow, unit_note = CBC_STYLE.get(f, DEFAULT_STYLE)
                     mae_text = f"\u00b1{mae:.2f}" if mae is not None else "?"
                     badge_html = (
                         '<span class="kpi-badge ok">\u2705 usable</span>' if reliable
                         else '<span class="kpi-badge warn">\u26a0\ufe0f low confidence</span>'
                     )
                     card_class = "kpi-card" + ("" if reliable else " kpi-card-muted")
+                    shadow = f"0 6px 22px {glow}55" if reliable else "0 4px 14px rgba(0,0,0,0.35)"
                     tip = f"{unit_note}. Typical error \u00b1{mae:.2f} on held-out test data (R\u00b2={r2:.2f})." if mae is not None and r2 is not None else unit_note
                     col.markdown(f"""
-                        <div class="{card_class}" style="background:{grad};" title="{tip}">
+                        <div class="{card_class}" style="background:{grad}; box-shadow:{shadow};" title="{tip}">
                             <div class="kpi-icon">{icon}</div>
                             <div class="kpi-value">{value:.1f}<span class="kpi-margin">{mae_text}</span></div>
                             <div class="kpi-label">{f}</div>
@@ -840,7 +853,7 @@ with tab1:
                 "rather than a real estimate.</div>", unsafe_allow_html=True
             )
 
-        st.subheader("General notes (not a diagnosis)")
+        st.markdown('<div class="gradient-heading">General notes (not a diagnosis)</div>', unsafe_allow_html=True)
         rec_html = "".join(f"<li>{r}</li>" for r in RECOMMENDATIONS[predicted_label])
         st.markdown(f'<ul class="rec-list">{rec_html}</ul>', unsafe_allow_html=True)
 
