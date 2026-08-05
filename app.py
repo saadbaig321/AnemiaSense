@@ -10,7 +10,10 @@ import streamlit as st
 import plotly.graph_objects as go
 import plotly.express as px
 import pandas as pd
-from sklearn.metrics import classification_report, confusion_matrix, roc_auc_score
+from sklearn.metrics import (
+    classification_report, confusion_matrix, roc_auc_score,
+    precision_recall_fscore_support,
+)
 
 st.set_page_config(page_title="AnemiaSense Dashboard", layout="wide", page_icon="\U0001FA78")
 
@@ -54,7 +57,34 @@ html, body, [class*="css"]  {
     75%  { transform: translateY(30px) translateX(15px) scale(1.03); }
     100% { transform: translateY(0) translateX(0) scale(1); }
 }
-.block-container { position: relative; z-index: 1; }
+.block-container {
+    position: relative; z-index: 1; max-width: 1500px;
+    padding-top: 1.5rem; padding-bottom: 3rem;
+}
+
+.hero-card {
+    position: relative; overflow: hidden;
+    background: linear-gradient(120deg, rgba(12,30,48,0.96), rgba(20,68,78,0.92));
+    border: 1px solid rgba(94,234,212,0.22); border-radius: 24px;
+    padding: 28px 30px; margin-bottom: 22px;
+    box-shadow: 0 18px 45px rgba(0,0,0,0.28);
+}
+.hero-card::after {
+    content: ''; position: absolute; width: 360px; height: 360px;
+    right: -110px; top: -190px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(38,224,201,0.28), transparent 68%);
+}
+.hero-content { position: relative; z-index: 1; }
+.hero-eyebrow { color: #5eead4; font-size: 11px; font-weight: 700; letter-spacing: 1.8px; }
+.hero-title { color: #f8fafc; font-size: 38px; font-weight: 700; margin: 6px 0; }
+.hero-title span { color: #7dd3fc; }
+.hero-subtitle { color: #cbd5e1; max-width: 760px; line-height: 1.6; font-size: 14px; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.status-chip {
+    display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 999px;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.10);
+    color: #dbeafe; font-size: 11px; font-weight: 600;
+}
 
 .big-title {
     font-size: 42px;
@@ -74,8 +104,8 @@ html, body, [class*="css"]  {
 
 .kpi-card {
     border-radius: 14px;
-    padding: 18px 16px;
-    text-align: center;
+    padding: 18px 18px; min-height: 126px;
+    text-align: left;
     color: white;
     box-shadow: 0 4px 14px rgba(0,0,0,0.35);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -85,9 +115,10 @@ html, body, [class*="css"]  {
     box-shadow: 0 8px 20px rgba(0,0,0,0.5);
 }
 .kpi-value {
-    font-size: 26px;
+    font-size: 28px;
     font-weight: 700;
 }
+.kpi-icon { font-size: 20px; margin-bottom: 10px; }
 .kpi-label {
     font-size: 12px;
     opacity: 0.9;
@@ -95,15 +126,42 @@ html, body, [class*="css"]  {
     letter-spacing: 0.4px;
     text-transform: uppercase;
 }
+.kpi-tip { color: rgba(255,255,255,0.72); font-size: 11px; margin-top: 7px; line-height: 1.35; }
 
 .section-card {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(8,18,30,0.62);
+    border: 1px solid rgba(148,163,184,0.13);
     border-radius: 16px;
     padding: 18px;
     margin-bottom: 20px;
     backdrop-filter: blur(6px);
 }
+
+.metric-guide {
+    background: linear-gradient(145deg, rgba(17,40,58,0.96), rgba(21,56,62,0.92));
+    border: 1px solid rgba(94,234,212,0.20); border-radius: 16px;
+    padding: 18px; margin: 8px 0 12px 0; min-height: 208px;
+}
+.metric-guide-top { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; }
+.metric-guide-icon { font-size: 30px; }
+.metric-guide-name { color: #f8fafc; font-size: 21px; font-weight: 700; }
+.metric-guide-value { color: #5eead4; font-size: 28px; font-weight: 700; }
+.metric-guide-copy { color: #cbd5e1; font-size: 13px; line-height: 1.55; margin-top: 10px; }
+.formula-pill {
+    display: inline-block; color: #bae6fd; background: rgba(56,189,248,0.10);
+    border: 1px solid rgba(56,189,248,0.18); border-radius: 9px;
+    padding: 7px 10px; margin-top: 12px; font-family: monospace; font-size: 12px;
+}
+
+div[data-testid="stMetric"] {
+    background: rgba(15,23,42,0.52); border: 1px solid rgba(148,163,184,0.12);
+    padding: 11px 13px; border-radius: 12px;
+}
+.stTabs [data-baseweb="tab-list"] {
+    gap: 8px; background: rgba(15,23,42,0.55); padding: 6px; border-radius: 13px;
+}
+.stTabs [data-baseweb="tab"] { border-radius: 9px; padding: 8px 16px; }
+.stTabs [aria-selected="true"] { background: rgba(38,224,201,0.14); }
 
 .result-badge {
     display: inline-block;
@@ -174,6 +232,12 @@ html, body, [class*="css"]  {
     font-style: italic;
     margin-top: 6px;
 }
+
+@media (max-width: 800px) {
+    .hero-title { font-size: 29px; }
+    .hero-card { padding: 22px 20px; }
+    .kpi-card { min-height: 112px; }
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -239,6 +303,8 @@ metrics, class_avg_color, model, class_names, reg_model, reg_meta = load_everyth
 all_labels = np.array(metrics["all_labels"])
 all_preds = np.array(metrics["all_preds"])
 all_probs = np.array(metrics["all_probs"])
+val_labels_for_threshold = np.array(metrics.get("val_labels_for_threshold", []))
+val_probs_for_threshold = np.array(metrics.get("val_probs_for_threshold", []))
 best_threshold = metrics["best_threshold"]
 temperature = metrics.get("temperature", 1.0)
 train_losses = metrics["train_losses"]
@@ -253,12 +319,29 @@ transform_val = transforms.Compose([
 ])
 
 def predict_with_tta(model, images):
-    # Averages raw logits, THEN applies the fitted temperature before the
-    # single softmax - this is what makes displayed confidence calibrated.
-    logits1 = model(images)
-    logits2 = model(torch.flip(images, dims=[3]))
-    avg_logits = (logits1 + logits2) / 2
+    # Match notebook validation/test inference exactly: original, horizontal,
+    # vertical, and 180-degree views, averaged as raw logits.
+    views = (
+        images,
+        torch.flip(images, dims=[3]),
+        torch.flip(images, dims=[2]),
+        torch.flip(images, dims=[2, 3]),
+    )
+    avg_logits = torch.stack([model(view) for view in views], dim=0).mean(dim=0)
     return torch.softmax(avg_logits / temperature, dim=1)
+
+def metrics_at_threshold(labels, probs, threshold):
+    """Educational validation-only threshold snapshot for the dashboard."""
+    predictions = (probs[:, 1] >= threshold).astype(int)
+    precision, recall, f1, _ = precision_recall_fscore_support(
+        labels, predictions, average="macro", zero_division=0
+    )
+    return {
+        "accuracy": float((predictions == labels).mean()),
+        "precision": float(precision),
+        "recall": float(recall),
+        "f1": float(f1),
+    }
 
 # ---------- Grad-CAM (sharper: percentile-thresholded to cut visual noise) ----------
 class GradCAM:
@@ -339,39 +422,59 @@ tab1, tab2 = st.tabs(["\U0001F4CA Model Dashboard", "\U0001F4DA Learn About Anem
 
 with tab1:
     # ================= HEADER =================
-    st.markdown('<div class="big-title">\U0001FA78 AnemiaSense Dashboard</div>', unsafe_allow_html=True)
-    st.markdown('<div class="subtitle">Live model dashboard - not a medical diagnosis tool.</div>', unsafe_allow_html=True)
+    st.markdown(f"""
+        <div class="hero-card">
+            <div class="hero-content">
+                <div class="hero-eyebrow">AI-ASSISTED RBC IMAGE ANALYSIS</div>
+                <div class="hero-title">\U0001FA78 AnemiaSense <span>Model Dashboard</span></div>
+                <div class="hero-subtitle">
+                    Explore held-out model performance, understand every metric, and inspect a new
+                    RGB-segmented blood-cell image. Educational research interface - not a diagnosis.
+                </div>
+                <div class="chip-row">
+                    <span class="status-chip">\u2713 Held-out test set</span>
+                    <span class="status-chip">{len(all_labels)} test images</span>
+                    <span class="status-chip">{len(class_names)} balanced classes</span>
+                    <span class="status-chip">Threshold {best_threshold:.2f}</span>
+                </div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
 
-    report_dict = classification_report(all_labels, all_preds, target_names=class_names, output_dict=True)
+    display_class_names = [name.replace("_individuals", "") for name in class_names]
+    report_dict = classification_report(
+        all_labels, all_preds, target_names=class_names, output_dict=True, zero_division=0
+    )
     overall_acc = (all_preds == all_labels).mean()
     auc_score = roc_auc_score(all_labels, all_probs[:, 1]) if len(class_names) == 2 else None
 
     # ================= KPI CARDS =================
     kpi_defs = [
-        ("Test Accuracy", f"{overall_acc:.1%}", "linear-gradient(135deg,#0f9b8e,#0c6e64)",
-         "Of ALL predictions, the % that were correct. Simple, but can be misleading if classes are imbalanced."),
-        ("Precision", f"{report_dict['macro avg']['precision']:.1%}", "linear-gradient(135deg,#1f77b4,#154a73)",
-         "Of everything the model FLAGGED as a class, the % that were actually right. High precision = few false alarms."),
-        ("Recall", f"{report_dict['macro avg']['recall']:.1%}", "linear-gradient(135deg,#e07b39,#a85423)",
-         "Of everything that ACTUALLY belongs to a class, the % the model caught. High recall = few missed cases."),
-        ("F1-score", f"{report_dict['macro avg']['f1-score']:.1%}", "linear-gradient(135deg,#8e44ad,#5b2c6f)",
-         "A single balance of Precision and Recall. Low if either one is weak - can't be faked by being great at only one."),
-        ("ROC-AUC", f"{auc_score:.3f}" if auc_score is not None else "-", "linear-gradient(135deg,#2c3e50,#1a242f)",
-         "How well the model ranks positives above negatives, across every possible threshold. 1.0 = perfect, 0.5 = random guessing."),
-        ("Threshold", f"{best_threshold:.2f}", "linear-gradient(135deg,#c0392b,#7b1e14)",
-         "The cutoff probability used to decide the final class. Tuned on validation data, not a fixed 0.5."),
+        ("\U0001F3AF", "Test Accuracy", f"{overall_acc:.1%}", "linear-gradient(135deg,#0f9b8e,#0c6e64)",
+         "Correct predictions out of all test images."),
+        ("\U0001F50E", "Precision (macro)", f"{report_dict['macro avg']['precision']:.1%}", "linear-gradient(135deg,#1f77b4,#154a73)",
+         "When the model predicts a class, how often it is right."),
+        ("\U0001F4E1", "Recall (macro)", f"{report_dict['macro avg']['recall']:.1%}", "linear-gradient(135deg,#d97732,#8f431b)",
+         "How many real cases of each class the model finds."),
+        ("\u2696\ufe0f", "F1-score (macro)", f"{report_dict['macro avg']['f1-score']:.1%}", "linear-gradient(135deg,#8e44ad,#5b2c6f)",
+         "The balance between precision and recall."),
+        ("\U0001F4C8", "ROC-AUC", f"{auc_score:.3f}" if auc_score is not None else "-", "linear-gradient(135deg,#334155,#172033)",
+         "Ranking quality across all possible thresholds."),
+        ("\U0001F39A\ufe0f", "Decision Threshold", f"{best_threshold:.2f}", "linear-gradient(135deg,#b7354a,#712335)",
+         "Probability cutoff selected on validation data."),
     ]
-    kpi_cols = st.columns(len(kpi_defs))
-    for col, (label, value, grad, tip) in zip(kpi_cols, kpi_defs):
-        col.markdown(f"""
-            <div class="kpi-card" style="background:{grad};" title="{tip}">
-                <div class="kpi-value">{value}</div>
-                <div class="kpi-label">{label}</div>
-            </div>
-        """, unsafe_allow_html=True)
-    st.caption("Hover over any card above for a plain-English definition of that metric.")
-
-    st.write("")
+    for row_start in range(0, len(kpi_defs), 3):
+        kpi_cols = st.columns(3)
+        for col, (icon, label, value, grad, tip) in zip(kpi_cols, kpi_defs[row_start:row_start + 3]):
+            col.markdown(f"""
+                <div class="kpi-card" style="background:{grad};" title="{tip}">
+                    <div class="kpi-icon">{icon}</div>
+                    <div class="kpi-value">{value}</div>
+                    <div class="kpi-label">{label}</div>
+                    <div class="kpi-tip">{tip}</div>
+                </div>
+            """, unsafe_allow_html=True)
+        st.write("")
 
     # ================= CHARTS =================
     col1, col2 = st.columns(2)
@@ -400,10 +503,10 @@ with tab1:
     with col2:
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
         metrics_rows = []
-        for cls in class_names:
-            metrics_rows.append({"class": cls, "metric": "Precision", "value": report_dict[cls]["precision"]})
-            metrics_rows.append({"class": cls, "metric": "Recall", "value": report_dict[cls]["recall"]})
-            metrics_rows.append({"class": cls, "metric": "F1-score", "value": report_dict[cls]["f1-score"]})
+        for cls, display_cls in zip(class_names, display_class_names):
+            metrics_rows.append({"class": display_cls, "metric": "Precision", "value": report_dict[cls]["precision"]})
+            metrics_rows.append({"class": display_cls, "metric": "Recall", "value": report_dict[cls]["recall"]})
+            metrics_rows.append({"class": display_cls, "metric": "F1-score", "value": report_dict[cls]["f1-score"]})
         metrics_df = pd.DataFrame(metrics_rows)
         fig_prf = px.bar(
             metrics_df, x="class", y="value", color="metric", barmode="group", text_auto=".2%",
@@ -418,22 +521,189 @@ with tab1:
         st.caption("Precision = few false alarms. Recall = few missed cases. F1 = balance of both. Higher bars = better.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    cm = confusion_matrix(all_labels, all_preds)
-    fig_cm = px.imshow(
-        cm, text_auto=True, x=class_names, y=class_names, color_continuous_scale="Teal",
-        template="plotly_dark", labels=dict(x="Predicted", y="Actual", color="Count"),
-        title="Confusion Matrix (Test Set)",
-    )
-    fig_cm.update_layout(height=380, paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
-    st.plotly_chart(fig_cm, use_container_width=False)
-    st.caption("Rows = the real answer, columns = what the model guessed. The diagonal is correct; everything off it is a mistake.")
-    st.markdown('</div>', unsafe_allow_html=True)
+    # ================= CONFUSION MATRIX + INTERACTIVE METRIC LAB =================
+    cm_col, guide_col = st.columns([1.08, 0.92], gap="large")
+
+    with cm_col:
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.markdown("### \U0001F9ED Confusion Matrix")
+        cm_view = st.radio(
+            "Confusion matrix view", ("Counts", "Row percentages"),
+            horizontal=True, label_visibility="collapsed", key="cm_view",
+        )
+        cm_counts = confusion_matrix(
+            all_labels, all_preds, labels=list(range(len(class_names)))
+        )
+        if cm_view == "Row percentages":
+            row_totals = cm_counts.sum(axis=1, keepdims=True)
+            cm_display = np.divide(
+                cm_counts, row_totals, out=np.zeros_like(cm_counts, dtype=float), where=row_totals != 0
+            )
+            text_format = ".1%"
+            color_title = "Row %"
+            hover_template = "Actual: %{y}<br>Predicted: %{x}<br>Share: %{z:.1%}<extra></extra>"
+        else:
+            cm_display = cm_counts
+            text_format = True
+            color_title = "Images"
+            hover_template = "Actual: %{y}<br>Predicted: %{x}<br>Images: %{z}<extra></extra>"
+
+        fig_cm = px.imshow(
+            cm_display, text_auto=text_format, x=display_class_names, y=display_class_names,
+            color_continuous_scale="Teal", template="plotly_dark",
+            labels=dict(x="Predicted", y="Actual", color=color_title),
+            aspect="auto",
+        )
+        fig_cm.update_traces(hovertemplate=hover_template)
+        fig_cm.update_layout(
+            height=355, margin=dict(l=5, r=5, t=15, b=5),
+            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            coloraxis_colorbar=dict(thickness=12),
+        )
+        st.plotly_chart(fig_cm, use_container_width=True)
+        correct_total = int(np.trace(cm_counts))
+        error_total = int(cm_counts.sum() - correct_total)
+        cm_stat1, cm_stat2 = st.columns(2)
+        cm_stat1.metric("Correct", f"{correct_total} / {int(cm_counts.sum())}")
+        cm_stat2.metric("Misclassified", error_total)
+        st.caption(
+            "Read across each row: the diagonal cells are correct predictions; off-diagonal cells are mistakes."
+        )
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with guide_col:
+        st.markdown('<div class="section-card">', unsafe_allow_html=True)
+        st.markdown("### \U0001F9E0 Interactive Metric Guide")
+        st.caption("Pick a metric to see what it means and how to read the current value.")
+
+        metric_info = {
+            "Accuracy": {
+                "icon": "\U0001F3AF", "score": overall_acc, "display": f"{overall_acc:.1%}",
+                "formula": "Correct predictions / All predictions",
+                "definition": "The overall share of test images classified correctly.",
+                "reading": "Best as a quick summary when the two classes are balanced.",
+            },
+            "Precision": {
+                "icon": "\U0001F50E", "score": report_dict["macro avg"]["precision"],
+                "display": f"{report_dict['macro avg']['precision']:.1%}",
+                "formula": "TP / (TP + FP)",
+                "definition": "When the model predicts a class, precision asks how often that prediction is right.",
+                "reading": "Higher precision means fewer false alarms. This dashboard shows the macro average.",
+            },
+            "Recall": {
+                "icon": "\U0001F4E1", "score": report_dict["macro avg"]["recall"],
+                "display": f"{report_dict['macro avg']['recall']:.1%}",
+                "formula": "TP / (TP + FN)",
+                "definition": "Recall asks how many of the real cases the model successfully finds.",
+                "reading": "Higher recall means fewer missed cases. This dashboard shows the macro average.",
+            },
+            "F1-score": {
+                "icon": "\u2696\ufe0f", "score": report_dict["macro avg"]["f1-score"],
+                "display": f"{report_dict['macro avg']['f1-score']:.1%}",
+                "formula": "2 x (Precision x Recall) / (Precision + Recall)",
+                "definition": "F1 combines precision and recall into one balanced score.",
+                "reading": "Useful when both false alarms and missed cases matter.",
+            },
+            "ROC-AUC": {
+                "icon": "\U0001F4C8", "score": auc_score if auc_score is not None else 0.0,
+                "display": f"{auc_score:.3f}" if auc_score is not None else "-",
+                "formula": "Ranking quality across every cutoff",
+                "definition": "ROC-AUC measures whether higher probabilities usually go to the correct class.",
+                "reading": "1.0 is perfect ranking; 0.5 is roughly random ranking.",
+            },
+            "Threshold": {
+                "icon": "\U0001F39A\ufe0f", "score": best_threshold, "display": f"{best_threshold:.3f}",
+                "formula": f"Predict {display_class_names[1]} when probability >= threshold",
+                "definition": "The threshold converts a probability into the final class decision.",
+                "reading": f"Lower values predict {display_class_names[1]} more often; higher values favor {display_class_names[0]}. It does not retrain the model.",
+            },
+        }
+        selected_metric = st.selectbox("Metric", list(metric_info), key="metric_guide_choice")
+        selected_info = metric_info[selected_metric]
+        st.markdown(f"""
+            <div class="metric-guide">
+                <div class="metric-guide-top">
+                    <div>
+                        <div class="metric-guide-icon">{selected_info['icon']}</div>
+                        <div class="metric-guide-name">{selected_metric}</div>
+                    </div>
+                    <div class="metric-guide-value">{selected_info['display']}</div>
+                </div>
+                <div class="metric-guide-copy">{selected_info['definition']}<br><br>{selected_info['reading']}</div>
+                <div class="formula-pill">{selected_info['formula']}</div>
+            </div>
+        """, unsafe_allow_html=True)
+        st.progress(
+            min(max(float(selected_info["score"]), 0.0), 1.0),
+            text=f"Current official value: {selected_info['display']}",
+        )
+
+        st.markdown("#### \U0001F39B\ufe0f Threshold playground")
+        st.caption(
+            "Validation-data demo only. Moving this slider never changes the official test result or saved threshold."
+        )
+        if len(val_labels_for_threshold) and len(val_probs_for_threshold):
+            positive_class = display_class_names[1] if len(display_class_names) > 1 else "Class 1"
+            demo_threshold = st.slider(
+                f"{positive_class} probability cutoff", 0.05, 0.95,
+                value=float(best_threshold), step=0.005, format="%.3f", key="threshold_playground",
+            )
+            official_snapshot = metrics_at_threshold(
+                val_labels_for_threshold, val_probs_for_threshold, best_threshold
+            )
+            demo_snapshot = metrics_at_threshold(
+                val_labels_for_threshold, val_probs_for_threshold, demo_threshold
+            )
+            demo_names = (("Accuracy", "accuracy"), ("Precision", "precision"),
+                          ("Recall", "recall"), ("F1", "f1"))
+            for start in range(0, len(demo_names), 2):
+                demo_cols = st.columns(2)
+                for col, (label, key) in zip(demo_cols, demo_names[start:start + 2]):
+                    delta_pp = (demo_snapshot[key] - official_snapshot[key]) * 100
+                    col.metric(label, f"{demo_snapshot[key]:.1%}", delta=f"{delta_pp:+.1f} pp")
+
+            with st.expander("Show metric curves across thresholds"):
+                curve_rows = []
+                for threshold_value in np.linspace(0.05, 0.95, 91):
+                    snapshot = metrics_at_threshold(
+                        val_labels_for_threshold, val_probs_for_threshold, threshold_value
+                    )
+                    for metric_key, metric_label in (("accuracy", "Accuracy"), ("precision", "Precision"),
+                                                     ("recall", "Recall"), ("f1", "F1")):
+                        curve_rows.append({
+                            "Threshold": threshold_value, "Metric": metric_label,
+                            "Score": snapshot[metric_key],
+                        })
+                curve_df = pd.DataFrame(curve_rows)
+                fig_curve = px.line(
+                    curve_df, x="Threshold", y="Score", color="Metric",
+                    template="plotly_dark", color_discrete_sequence=["#5eead4", "#60a5fa", "#fb923c", "#c084fc"],
+                )
+                fig_curve.add_vline(x=best_threshold, line_dash="dash", line_color="#f8fafc")
+                fig_curve.add_vline(x=demo_threshold, line_dash="dot", line_color="#fb7185")
+                fig_curve.update_layout(
+                    height=280, yaxis=dict(range=[0, 1]), margin=dict(l=0, r=0, t=10, b=0),
+                    paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                    legend=dict(orientation="h", y=-0.25),
+                )
+                st.plotly_chart(fig_curve, use_container_width=True)
+                st.caption("Dashed = official threshold; dotted pink = slider threshold.")
+        else:
+            st.info("Run the calibration/threshold cell, then re-save dashboard artifacts to enable this playground.")
+        st.markdown('</div>', unsafe_allow_html=True)
 
     # ================= UPLOAD + PREDICT =================
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.header("\U0001F4E4 Upload an image for prediction")
-    st.caption("Use an RGB_segmented-style image (color, background removed) - that's what the model was trained on.")
+    st.markdown("### \U0001F4E4 Prediction Studio")
+    st.caption("Upload one RGB_segmented-style image - color preserved, background removed - to inspect the model's result.")
+    st.markdown("""
+        <div class="chip-row">
+            <span class="status-chip">1 &middot; Upload image</span>
+            <span class="status-chip">2 &middot; Review prediction</span>
+            <span class="status-chip">3 &middot; Inspect Grad-CAM</span>
+        </div>
+    """, unsafe_allow_html=True)
+    st.write("")
 
     uploaded_file = st.file_uploader("Choose an image", type=["png", "jpg", "jpeg"])
 
