@@ -259,7 +259,9 @@ for i in range(14):
     "></div>"""
 st.markdown(_particles_html, unsafe_allow_html=True)
 
-DATA_DIR = "/content/dashboard_data"
+from pathlib import Path
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "dashboard_data"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # ---------- Load saved artifacts ----------
