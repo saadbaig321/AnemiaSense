@@ -128,6 +128,21 @@ html, body, [class*="css"]  {
 }
 .kpi-tip { color: rgba(255,255,255,0.72); font-size: 11px; margin-top: 7px; line-height: 1.35; }
 
+.kpi-card-muted { filter: grayscale(0.55) brightness(0.85); border: 1px dashed rgba(255,255,255,0.35); }
+.kpi-badge {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    margin-top: 8px;
+    background: rgba(0,0,0,0.28);
+}
+.kpi-badge.ok { color: #baffd6; }
+.kpi-badge.warn { color: #ffe4ae; }
+.kpi-margin { font-size: 13px; font-weight: 500; opacity: 0.85; margin-left: 6px; }
+
 .section-card {
     background: rgba(8,18,30,0.62);
     border: 1px solid rgba(148,163,184,0.13);
@@ -778,20 +793,47 @@ with tab1:
             field_mae = reg_meta["field_mae"]
             field_r2 = reg_meta["field_r2"]
 
-            cbc_cols = st.columns(len(target_fields))
-            for col, f in zip(cbc_cols, target_fields):
-                value = reg_out[target_fields.index(f)] * field_std[f] + field_mean[f]
-                mae = field_mae.get(f, None)
-                r2 = field_r2.get(f, None)
-                reliable = r2 is not None and r2 > 0.3
-                badge = "\u2705 usable" if reliable else "\u26a0\ufe0f low confidence"
-                mae_text = f"\u00b1{mae:.2f}" if mae is not None else "?"
-                col.markdown(f"""
-                    <div class="kpi-card" style="background:{'linear-gradient(135deg,#0f9b8e,#0c6e64)' if reliable else 'linear-gradient(135deg,#7d7d7d,#4a4a4a)'};">
-                        <div class="kpi-value">{value:.1f} {mae_text}</div>
-                        <div class="kpi-label">{f} &middot; {badge}</div>
-                    </div>
-                """, unsafe_allow_html=True)
+            # Same colorful card language as the KPI section up top - one
+            # signature gradient + icon per CBC field, so this panel reads
+            # as part of the same visual system instead of a flat gray afterthought.
+            CBC_STYLE = {
+                "Hemoglobin": ("\U0001FA78", "linear-gradient(135deg,#0f9b8e,#0c6e64)", "g/dL \u00b7 oxygen-carrying protein in red cells"),
+                "RBC":        ("\U0001F534", "linear-gradient(135deg,#1f77b4,#154a73)", "million/\u00b5L \u00b7 red blood cell count"),
+                "WBC":        ("\U0001F6E1\ufe0f", "linear-gradient(135deg,#d97732,#8f431b)", "thousand/\u00b5L \u00b7 white blood cell (immune) count"),
+                "Hematocrit": ("\U0001F4A7", "linear-gradient(135deg,#8e44ad,#5b2c6f)", "% \u00b7 blood volume made up of red cells"),
+                "Platelets":  ("\U0001F9EB", "linear-gradient(135deg,#c2185b,#6a1b3d)", "thousand/\u00b5L \u00b7 cell fragments that help clotting"),
+                "MCV":        ("\U0001F4CF", "linear-gradient(135deg,#2563eb,#1e3a8a)", "fL \u00b7 average size of a single red blood cell"),
+                "MCH":        ("\U0001F9EC", "linear-gradient(135deg,#334155,#172033)", "pg \u00b7 average hemoglobin per red blood cell"),
+                "MCHC":       ("\u2696\ufe0f", "linear-gradient(135deg,#b7354a,#712335)", "g/dL \u00b7 hemoglobin concentration in red cells"),
+                "RDW-CV":     ("\U0001F4CA", "linear-gradient(135deg,#16a34a,#166534)", "% \u00b7 variation in red blood cell size"),
+                "MPV":        ("\U0001F52C", "linear-gradient(135deg,#ca8a04,#78350f)", "fL \u00b7 average platelet size"),
+            }
+            DEFAULT_STYLE = ("\U0001F9EA", "linear-gradient(135deg,#475569,#1e293b)", "")
+
+            for row_start in range(0, len(target_fields), 3):
+                cbc_cols = st.columns(3)
+                for col, f in zip(cbc_cols, target_fields[row_start:row_start + 3]):
+                    value = reg_out[target_fields.index(f)] * field_std[f] + field_mean[f]
+                    mae = field_mae.get(f, None)
+                    r2 = field_r2.get(f, None)
+                    reliable = r2 is not None and r2 > 0.3
+                    icon, grad, unit_note = CBC_STYLE.get(f, DEFAULT_STYLE)
+                    mae_text = f"\u00b1{mae:.2f}" if mae is not None else "?"
+                    badge_html = (
+                        '<span class="kpi-badge ok">\u2705 usable</span>' if reliable
+                        else '<span class="kpi-badge warn">\u26a0\ufe0f low confidence</span>'
+                    )
+                    card_class = "kpi-card" + ("" if reliable else " kpi-card-muted")
+                    tip = f"{unit_note}. Typical error \u00b1{mae:.2f} on held-out test data (R\u00b2={r2:.2f})." if mae is not None and r2 is not None else unit_note
+                    col.markdown(f"""
+                        <div class="{card_class}" style="background:{grad};" title="{tip}">
+                            <div class="kpi-icon">{icon}</div>
+                            <div class="kpi-value">{value:.1f}<span class="kpi-margin">{mae_text}</span></div>
+                            <div class="kpi-label">{f}</div>
+                            {badge_html}
+                        </div>
+                    """, unsafe_allow_html=True)
+                st.write("")
             st.markdown(
                 "<div class='illustrative-note'>Values with 'low confidence' mean the model doesn't actually "
                 "track that parameter well (measured on real held-out test data) - treat those as unreliable "
