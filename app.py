@@ -1,5 +1,6 @@
 import json
 import os
+import base64
 import numpy as np
 import cv2
 import torch
@@ -84,6 +85,24 @@ html, body, [class*="css"]  {
     display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 999px;
     background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.10);
     color: #dbeafe; font-size: 11px; font-weight: 600;
+}
+
+.hero-logo-wrap {
+    position: absolute; z-index: 2;
+    top: 50%; right: 42px; transform: translateY(-50%);
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center; width: 190px;
+}
+.hero-logo-img {
+    width: 130px; height: auto;
+    filter: drop-shadow(0 6px 16px rgba(0,0,0,0.45));
+}
+.hero-logo-caption {
+    color: #bfe9ff; font-size: 11.5px; font-weight: 700;
+    margin-top: 10px; line-height: 1.4; letter-spacing: 0.2px;
+}
+@media (max-width: 900px) {
+    .hero-logo-wrap { display: none; }
 }
 
 .big-title {
@@ -449,6 +468,17 @@ tab1, tab2 = st.tabs(["\U0001F4CA Model Dashboard", "\U0001F4DA Learn About Anem
 
 with tab1:
     # ================= HEADER =================
+    _duhs_logo_path = os.path.join(os.path.dirname(__file__), "duhs_logo.png")
+    _duhs_logo_html = ""
+    if os.path.exists(_duhs_logo_path):
+        with open(_duhs_logo_path, "rb") as _f:
+            _duhs_b64 = base64.b64encode(_f.read()).decode()
+        _duhs_logo_html = f"""
+                <div class="hero-logo-wrap">
+                    <img class="hero-logo-img" src="data:image/png;base64,{_duhs_b64}" />
+                    <div class="hero-logo-caption">Under the supervision of<br/>Professors of D.U.H.S</div>
+                </div>"""
+
     st.markdown(f"""
         <div class="hero-card">
             <div class="hero-content">
@@ -464,7 +494,7 @@ with tab1:
                     <span class="status-chip">{len(class_names)} balanced classes</span>
                     <span class="status-chip">Threshold {best_threshold:.2f}</span>
                 </div>
-            </div>
+            </div>{_duhs_logo_html}
         </div>
     """, unsafe_allow_html=True)
 
