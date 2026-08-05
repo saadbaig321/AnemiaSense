@@ -1,6 +1,5 @@
 import json
 import os
-import io
 import base64
 import numpy as np
 import cv2
@@ -159,7 +158,6 @@ html, body, [class*="css"]  {
     -webkit-text-fill-color: transparent;
     display: inline-block;
 }
-.gradient-heading.h4 { font-size: 19px; margin: 14px 0 4px 0; }
 .kpi-badge {
     display: inline-block;
     font-size: 10.5px;
@@ -225,63 +223,11 @@ div[data-testid="stMetric"] {
 }
 
 [data-testid="stFileUploader"] {
-    border: none;
-    border-radius: 16px;
-    padding: 4px;
-    background: transparent;
+    border: 2px dashed rgba(255,255,255,0.25);
+    border-radius: 14px;
+    padding: 10px;
+    background: rgba(255,255,255,0.03);
 }
-[data-testid="stFileUploaderDropzone"] {
-    border: 2px dashed rgba(94,234,212,0.45) !important;
-    border-radius: 16px !important;
-    background: linear-gradient(135deg, rgba(94,234,212,0.07), rgba(96,165,250,0.07)) !important;
-    transition: border-color 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
-}
-[data-testid="stFileUploaderDropzone"]:hover {
-    border-color: #5eead4 !important;
-    background: linear-gradient(135deg, rgba(94,234,212,0.16), rgba(96,165,250,0.16)) !important;
-    box-shadow: 0 0 26px rgba(94,234,212,0.22);
-}
-
-.stepper-row { display: flex; align-items: center; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
-.step-pill {
-    display: flex; align-items: center; gap: 7px;
-    padding: 7px 14px; border-radius: 999px; font-size: 12px; font-weight: 700;
-    border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.045);
-    color: #94a3b8; transition: all 0.35s ease;
-}
-.step-pill.active {
-    background: linear-gradient(135deg,#00d2ff,#3a7bd5);
-    color: #ffffff; border-color: transparent;
-    box-shadow: 0 4px 16px rgba(58,123,213,0.45);
-}
-.step-pill.done {
-    background: linear-gradient(135deg, rgba(94,234,212,0.22), rgba(15,155,142,0.18));
-    color: #a7f3d0; border-color: rgba(94,234,212,0.3);
-}
-.step-arrow { color: #475569; font-size: 13px; }
-
-.studio-frame {
-    border-radius: 16px; overflow: hidden;
-    border: 1px solid rgba(148,163,184,0.18);
-    box-shadow: 0 8px 22px rgba(0,0,0,0.32);
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
-    background: rgba(15,23,42,0.4);
-}
-.studio-frame:hover { transform: translateY(-5px); box-shadow: 0 16px 34px rgba(0,0,0,0.5); }
-.studio-frame img { display: block; width: 100%; }
-.frame-caption {
-    padding: 8px 12px; font-size: 11.5px; font-weight: 700; letter-spacing: 0.3px;
-    color: #dbeafe; background: rgba(8,18,30,0.75); text-transform: uppercase;
-}
-
-.conf-bar-wrap { margin-top: 6px; }
-.conf-bar-label { display: flex; justify-content: space-between; font-size: 12.5px; color: #cbd5e1; font-weight: 700; margin-bottom: 6px; }
-.conf-bar-track {
-    width: 100%; height: 15px; border-radius: 999px;
-    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);
-    overflow: hidden;
-}
-.conf-bar-fill { height: 100%; border-radius: 999px; }
 
 .info-card {
     border-radius: 16px;
@@ -493,14 +439,6 @@ def make_gradcam_overlay(pil_img, input_tensor, class_idx, keep_top_pct=25):
     hot_area_pct = float((cam_sharp > 0.3).mean() * 100)
     return overlay, hot_area_pct
 
-def pil_to_data_uri(pil_img):
-    """Encode a PIL image as an inline base64 PNG data URI, for embedding
-    inside custom-styled HTML (e.g. the studio-frame cards)."""
-    buf = io.BytesIO()
-    pil_img.convert("RGB").save(buf, format="PNG")
-    b64 = base64.b64encode(buf.getvalue()).decode()
-    return f"data:image/png;base64,{b64}"
-
 def mean_cell_color(pil_img, dark_thresh=20):
     arr = np.array(pil_img.convert("RGB"))
     mask = arr.sum(axis=2) > dark_thresh * 3
@@ -645,7 +583,7 @@ with tab1:
 
     with cm_col:
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
-        st.markdown('<div class="gradient-heading">\U0001F9ED Confusion Matrix</div>', unsafe_allow_html=True)
+        st.markdown("### \U0001F9ED Confusion Matrix")
         cm_view = st.radio(
             "Confusion matrix view", ("Counts", "Row percentages"),
             horizontal=True, label_visibility="collapsed", key="cm_view",
@@ -692,7 +630,7 @@ with tab1:
 
     with guide_col:
         st.markdown('<div class="section-card">', unsafe_allow_html=True)
-        st.markdown('<div class="gradient-heading">\U0001F9E0 Interactive Metric Guide</div>', unsafe_allow_html=True)
+        st.markdown("### \U0001F9E0 Interactive Metric Guide")
         st.caption("Pick a metric to see what it means and how to read the current value.")
 
         metric_info = {
@@ -757,7 +695,7 @@ with tab1:
             text=f"Current official value: {selected_info['display']}",
         )
 
-        st.markdown('<div class="gradient-heading h4">\U0001F39B\ufe0f Threshold playground</div>', unsafe_allow_html=True)
+        st.markdown("#### \U0001F39B\ufe0f Threshold playground")
         st.caption(
             "Validation-data demo only. Moving this slider never changes the official test result or saved threshold."
         )
@@ -813,28 +751,18 @@ with tab1:
 
     # ================= UPLOAD + PREDICT =================
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="gradient-heading">\U0001F4E4 Prediction Studio</div>', unsafe_allow_html=True)
+    st.markdown("### \U0001F4E4 Prediction Studio")
     st.caption("Upload one RGB_segmented-style image - color preserved, background removed - to inspect the model's result.")
-
-    uploaded_file = st.file_uploader(
-        "Drag & drop or browse an image",
-        type=["png", "jpg", "jpeg"],
-        help="Best results with a color, background-removed single-cell crop (RGB_segmented style).",
-    )
-
-    step1_cls = "done" if uploaded_file is not None else "active"
-    step23_cls = "active" if uploaded_file is not None else ""
-    step1_icon = "\u2713" if uploaded_file is not None else "\U0001F4E4"
-    st.markdown(f"""
-        <div class="stepper-row">
-            <span class="step-pill {step1_cls}">{step1_icon} 1 &middot; Upload image</span>
-            <span class="step-arrow">&#8594;</span>
-            <span class="step-pill {step23_cls}">\U0001F52C 2 &middot; Review prediction</span>
-            <span class="step-arrow">&#8594;</span>
-            <span class="step-pill {step23_cls}">\U0001F525 3 &middot; Inspect Grad-CAM</span>
+    st.markdown("""
+        <div class="chip-row">
+            <span class="status-chip">1 &middot; Upload image</span>
+            <span class="status-chip">2 &middot; Review prediction</span>
+            <span class="status-chip">3 &middot; Inspect Grad-CAM</span>
         </div>
     """, unsafe_allow_html=True)
     st.write("")
+
+    uploaded_file = st.file_uploader("Choose an image", type=["png", "jpg", "jpeg"])
 
     if uploaded_file is not None:
         img = Image.open(uploaded_file).convert("RGB")
@@ -860,35 +788,13 @@ with tab1:
 
         r1, r2, r3 = st.columns([1, 1, 1.3])
         with r1:
-            st.markdown(f"""
-                <div class="studio-frame">
-                    <img src="{pil_to_data_uri(img_224)}" />
-                    <div class="frame-caption">\U0001F4F7 Uploaded image</div>
-                </div>
-            """, unsafe_allow_html=True)
+            st.image(img_224, caption="Uploaded image")
         with r2:
-            st.markdown(f"""
-                <div class="studio-frame">
-                    <img src="{pil_to_data_uri(overlay)}" />
-                    <div class="frame-caption">\U0001F525 Grad-CAM &middot; model's focus</div>
-                </div>
-            """, unsafe_allow_html=True)
+            st.image(overlay, caption="Grad-CAM: what the model focused on")
         with r3:
-            is_anemic = predicted_label == "Anemic_individuals"
-            badge_bg = "linear-gradient(135deg,#ff5c7a,#c0392b,#7b1e14)" if is_anemic else "linear-gradient(135deg,#26e0c9,#0f9b8e,#0c6e64)"
-            bar_color = "linear-gradient(90deg,#ff8a9b,#ff5c7a)" if is_anemic else "linear-gradient(90deg,#5eead4,#26e0c9)"
-            badge_icon = "\U0001F6A8" if is_anemic else "\u2705"
-            conf_pct = confidence * 100
-            st.markdown(f"""
-                <div class="result-badge" style="background:{badge_bg};">{badge_icon} {label_display}</div>
-                <div class="conf-bar-wrap">
-                    <div class="conf-bar-label"><span>Model confidence</span><span>{confidence:.1%}</span></div>
-                    <div class="conf-bar-track">
-                        <div class="conf-bar-fill" style="width:{conf_pct:.1f}%; background:{bar_color};"></div>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-            st.write("")
+            badge_bg = "linear-gradient(135deg,#c0392b,#7b1e14)" if predicted_label == "Anemic_individuals" else "linear-gradient(135deg,#0f9b8e,#0c6e64)"
+            st.markdown(f'<div class="result-badge" style="background:{badge_bg};">{label_display}</div>', unsafe_allow_html=True)
+            st.metric("Confidence", f"{confidence:.1%}")
             if abs(prob_class1 - best_threshold) < 0.05:
                 st.warning("This prediction is close to the decision boundary - treat as uncertain.")
 
@@ -986,7 +892,7 @@ with tab1:
 with tab2:
 
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="gradient-heading">What is Anemia?</div>', unsafe_allow_html=True)
+    st.markdown("### What is Anemia?")
     ic1, ic2, ic3, ic4 = st.columns(4)
     info_cards = [
         ("\U0001FA78", "The Basics", "Anemia means your blood has fewer healthy red blood cells "
@@ -1013,7 +919,7 @@ with tab2:
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="gradient-heading">Recovery Journeys</div>', unsafe_allow_html=True)
+    st.markdown("### Recovery Journeys")
     st.markdown('<div class="illustrative-note">Illustrative, composite stories for educational purposes - not real documented case histories.</div>', unsafe_allow_html=True)
     st.write("")
     s1, s2, s3 = st.columns(3)
@@ -1041,7 +947,7 @@ with tab2:
     st.markdown('</div>', unsafe_allow_html=True)
 
     st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown('<div class="gradient-heading">Frequently Asked Questions</div>', unsafe_allow_html=True)
+    st.markdown("### Frequently Asked Questions")
 
     faqs = [
         ("Is anemia serious?", "It ranges from mild to severe. Mild anemia is often manageable, but "
