@@ -1,6 +1,9 @@
 import json
 import os
 import base64
+from pathlib import Path
+from threading import Lock
+
 import numpy as np
 import cv2
 import torch
@@ -15,6 +18,8 @@ from sklearn.metrics import (
     classification_report, confusion_matrix, roc_auc_score,
     precision_recall_fscore_support,
 )
+
+from workspace_home import select_module
 
 st.set_page_config(page_title="AnemiaSense Dashboard", layout="wide", page_icon="\U0001FA78")
 
@@ -303,7 +308,12 @@ for i in range(14):
     "></div>"""
 st.markdown(_particles_html, unsafe_allow_html=True)
 
-from pathlib import Path
+if select_module() == "pbs":
+    from pbs_page import render_pbs
+
+    render_pbs()
+    st.stop()
+
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "dashboard_data"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -342,9 +352,9 @@ def load_everything():
         reg_model.to(device)
         reg_model.eval()
 
-    return metrics, class_avg_color, model, class_names, reg_model, reg_meta
+    return metrics, class_avg_color, model, class_names, reg_model, reg_meta, Lock()
 
-metrics, class_avg_color, model, class_names, reg_model, reg_meta = load_everything()
+metrics, class_avg_color, model, class_names, reg_model, reg_meta, model_lock = load_everything()
 
 all_labels = np.array(metrics["all_labels"])
 all_preds = np.array(metrics["all_preds"])
@@ -395,8 +405,14 @@ class GradCAM:
         self.model = model
         self.gradients = None
         self.activations = None
-        target_layer.register_forward_hook(self._save_activation)
-        target_layer.register_full_backward_hook(self._save_gradient)
+        self.hooks = (
+            target_layer.register_forward_hook(self._save_activation),
+            target_layer.register_full_backward_hook(self._save_gradient),
+        )
+
+    def close(self):
+        for hook in self.hooks:
+            hook.remove()
 
     def _save_activation(self, module, inp, out):
         self.activations = out.detach()
@@ -420,10 +436,12 @@ class GradCAM:
         cam /= (cam.max() + 1e-8)
         return cam.cpu().numpy()
 
-gradcam = GradCAM(model, model.layer4)
-
 def make_gradcam_overlay(pil_img, input_tensor, class_idx, keep_top_pct=25):
-    cam = gradcam.generate(input_tensor, class_idx)
+    gradcam = GradCAM(model, model.layer4)
+    try:
+        cam = gradcam.generate(input_tensor, class_idx)
+    finally:
+        gradcam.close()
     cam_resized = cv2.resize(cam, pil_img.size)
 
     thresh = np.percentile(cam_resized, 100 - keep_top_pct)
@@ -554,7 +572,7 @@ with tab1:
             yaxis2=dict(title="Val Accuracy", overlaying="y", side="right", range=[0, 1]),
             legend=dict(orientation="h", y=-0.25), height=360,
         )
-        st.plotly_chart(fig_train, use_container_width=True)
+        st.plotly_chart(fig_train, width="stretch")
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col2:
@@ -574,7 +592,7 @@ with tab1:
             yaxis=dict(range=[0, 1], title="Score"), xaxis_title="", height=360,
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         )
-        st.plotly_chart(fig_prf, use_container_width=True)
+        st.plotly_chart(fig_prf, width="stretch")
         st.caption("Precision = few false alarms. Recall = few missed cases. F1 = balance of both. Higher bars = better.")
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -617,7 +635,7 @@ with tab1:
             paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
             coloraxis_colorbar=dict(thickness=12),
         )
-        st.plotly_chart(fig_cm, use_container_width=True)
+        st.plotly_chart(fig_cm, width="stretch")
         correct_total = int(np.trace(cm_counts))
         error_total = int(cm_counts.sum() - correct_total)
         cm_stat1, cm_stat2 = st.columns(2)
@@ -743,7 +761,7 @@ with tab1:
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
                     legend=dict(orientation="h", y=-0.25),
                 )
-                st.plotly_chart(fig_curve, use_container_width=True)
+                st.plotly_chart(fig_curve, width="stretch")
                 st.caption("Dashed = official threshold; dotted pink = slider threshold.")
         else:
             st.info("Run the calibration/threshold cell, then re-save dashboard artifacts to enable this playground.")
@@ -769,14 +787,15 @@ with tab1:
         img_224 = img.resize((224, 224))
         input_tensor = transform_val(img).unsqueeze(0).to(device)
 
-        with torch.no_grad():
+        with model_lock, torch.no_grad():
             probs = predict_with_tta(model, input_tensor)
         prob_class1 = probs[0][1].item()
         pred_idx = int(prob_class1 >= best_threshold)
         predicted_label = class_names[pred_idx]
         confidence = probs[0][pred_idx].item()
 
-        overlay, hot_area_pct = make_gradcam_overlay(img_224, input_tensor, pred_idx)
+        with model_lock:
+            overlay, hot_area_pct = make_gradcam_overlay(img_224, input_tensor, pred_idx)
 
         this_color = mean_cell_color(img)
         dist_to_anemic = float(np.linalg.norm(this_color - class_avg_color["Anemic_individuals"]))
