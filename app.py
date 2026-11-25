@@ -1,6 +1,5 @@
 import json
 import os
-import base64
 from pathlib import Path
 from threading import Lock
 
@@ -23,290 +22,9 @@ from workspace_home import select_module
 
 st.set_page_config(page_title="AnemiaSense Dashboard", layout="wide", page_icon="\U0001FA78")
 
-# =========================================================
-# THEME: animated gradient background + custom styled cards
-# =========================================================
-st.markdown("""
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+from ui import apply_theme, render_hero, metric_grid, section_heading
 
-html, body, [class*="css"]  {
-    font-family: 'Poppins', sans-serif;
-}
-
-.stApp {
-    background: linear-gradient(-45deg, #0f2027, #203a43, #2c5364, #0f3d3e, #1b1b3a);
-    background-size: 400% 400%;
-    animation: gradientShift 18s ease infinite;
-}
-
-@keyframes gradientShift {
-    0%   { background-position: 0% 50%; }
-    50%  { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
-
-/* Floating "blood cell" particles - live, multi-color, drifting background layer */
-.cell-particle {
-    position: fixed;
-    border-radius: 50%;
-    filter: blur(1px);
-    opacity: 0.35;
-    z-index: 0;
-    pointer-events: none;
-    animation: floatDrift linear infinite;
-}
-@keyframes floatDrift {
-    0%   { transform: translateY(0) translateX(0) scale(1); }
-    25%  { transform: translateY(-40px) translateX(20px) scale(1.05); }
-    50%  { transform: translateY(-10px) translateX(-30px) scale(0.95); }
-    75%  { transform: translateY(30px) translateX(15px) scale(1.03); }
-    100% { transform: translateY(0) translateX(0) scale(1); }
-}
-.block-container {
-    position: relative; z-index: 1; max-width: 1500px;
-    padding-top: 1.5rem; padding-bottom: 3rem;
-}
-
-.hero-card {
-    position: relative; overflow: hidden;
-    background: linear-gradient(120deg, rgba(12,30,48,0.96), rgba(20,68,78,0.92));
-    border: 1px solid rgba(94,234,212,0.22); border-radius: 24px;
-    padding: 28px 30px; margin-bottom: 22px;
-    box-shadow: 0 18px 45px rgba(0,0,0,0.28);
-}
-.hero-card::after {
-    content: ''; position: absolute; width: 360px; height: 360px;
-    right: -110px; top: -190px; border-radius: 50%;
-    background: radial-gradient(circle, rgba(38,224,201,0.28), transparent 68%);
-}
-.hero-content { position: relative; z-index: 1; }
-.hero-eyebrow { color: #5eead4; font-size: 11px; font-weight: 700; letter-spacing: 1.8px; }
-.hero-title { color: #f8fafc; font-size: 38px; font-weight: 700; margin: 6px 0; }
-.hero-title span { color: #7dd3fc; }
-.hero-subtitle { color: #cbd5e1; max-width: 760px; line-height: 1.6; font-size: 14px; }
-.chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
-.status-chip {
-    display: inline-flex; align-items: center; padding: 6px 10px; border-radius: 999px;
-    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.10);
-    color: #dbeafe; font-size: 11px; font-weight: 600;
-}
-
-.hero-logo-wrap {
-    position: absolute; z-index: 2;
-    top: 50%; right: 42px; transform: translateY(-50%);
-    display: flex; flex-direction: column; align-items: center;
-    text-align: center; width: 190px;
-}
-.hero-logo-img {
-    width: 130px; height: auto;
-    filter: drop-shadow(0 6px 16px rgba(0,0,0,0.45));
-}
-.hero-logo-caption {
-    color: #bfe9ff; font-size: 11.5px; font-weight: 700;
-    margin-top: 10px; line-height: 1.4; letter-spacing: 0.2px;
-}
-@media (max-width: 900px) {
-    .hero-logo-wrap { display: none; }
-}
-
-.big-title {
-    font-size: 42px;
-    font-weight: 700;
-    background: linear-gradient(90deg, #00d2ff, #3a7bd5, #ff6a88);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 0px;
-}
-
-.subtitle {
-    color: #b8c6db;
-    font-size: 15px;
-    margin-top: 0px;
-    margin-bottom: 20px;
-}
-
-.kpi-card {
-    border-radius: 14px;
-    padding: 18px 18px; min-height: 126px;
-    text-align: left;
-    color: white;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.35);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.kpi-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
-}
-.kpi-value {
-    font-size: 28px;
-    font-weight: 700;
-}
-.kpi-icon { font-size: 20px; margin-bottom: 10px; }
-.kpi-label {
-    font-size: 12px;
-    opacity: 0.9;
-    margin-top: 4px;
-    letter-spacing: 0.4px;
-    text-transform: uppercase;
-}
-.kpi-tip { color: rgba(255,255,255,0.72); font-size: 11px; margin-top: 7px; line-height: 1.35; }
-
-.kpi-card-muted { filter: grayscale(0.35) brightness(0.92) saturate(0.8); border: 1px dashed rgba(255,255,255,0.4); }
-.gradient-heading {
-    font-size: 26px;
-    font-weight: 800;
-    margin: 18px 0 6px 0;
-    background: linear-gradient(90deg, #00d2ff, #7b5cff, #ff6a88, #ffb14e);
-    background-size: 200% auto;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    display: inline-block;
-}
-.kpi-badge {
-    display: inline-block;
-    font-size: 10.5px;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-    padding: 3px 9px;
-    border-radius: 999px;
-    margin-top: 8px;
-    background: rgba(0,0,0,0.28);
-}
-.kpi-badge.ok { color: #baffd6; }
-.kpi-badge.warn { color: #ffe4ae; }
-.kpi-margin { font-size: 13px; font-weight: 500; opacity: 0.85; margin-left: 6px; }
-
-.section-card {
-    background: rgba(8,18,30,0.62);
-    border: 1px solid rgba(148,163,184,0.13);
-    border-radius: 16px;
-    padding: 18px;
-    margin-bottom: 20px;
-    backdrop-filter: blur(6px);
-}
-
-.metric-guide {
-    background: linear-gradient(145deg, rgba(17,40,58,0.96), rgba(21,56,62,0.92));
-    border: 1px solid rgba(94,234,212,0.20); border-radius: 16px;
-    padding: 18px; margin: 8px 0 12px 0; min-height: 208px;
-}
-.metric-guide-top { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; }
-.metric-guide-icon { font-size: 30px; }
-.metric-guide-name { color: #f8fafc; font-size: 21px; font-weight: 700; }
-.metric-guide-value { color: #5eead4; font-size: 28px; font-weight: 700; }
-.metric-guide-copy { color: #cbd5e1; font-size: 13px; line-height: 1.55; margin-top: 10px; }
-.formula-pill {
-    display: inline-block; color: #bae6fd; background: rgba(56,189,248,0.10);
-    border: 1px solid rgba(56,189,248,0.18); border-radius: 9px;
-    padding: 7px 10px; margin-top: 12px; font-family: monospace; font-size: 12px;
-}
-
-div[data-testid="stMetric"] {
-    background: rgba(15,23,42,0.52); border: 1px solid rgba(148,163,184,0.12);
-    padding: 11px 13px; border-radius: 12px;
-}
-.stTabs [data-baseweb="tab-list"] {
-    gap: 8px; background: rgba(15,23,42,0.55); padding: 6px; border-radius: 13px;
-}
-.stTabs [data-baseweb="tab"] { border-radius: 9px; padding: 8px 16px; }
-.stTabs [aria-selected="true"] { background: rgba(38,224,201,0.14); }
-
-.result-badge {
-    display: inline-block;
-    padding: 10px 22px;
-    border-radius: 30px;
-    font-size: 22px;
-    font-weight: 700;
-    color: white;
-    margin-bottom: 10px;
-}
-
-.rec-list li {
-    margin-bottom: 6px;
-    color: #dcdcdc;
-}
-
-[data-testid="stFileUploader"] {
-    border: 2px dashed rgba(255,255,255,0.25);
-    border-radius: 14px;
-    padding: 10px;
-    background: rgba(255,255,255,0.03);
-}
-
-.info-card {
-    border-radius: 16px;
-    padding: 20px;
-    color: white;
-    height: 100%;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
-    transition: transform 0.2s ease;
-}
-.info-card:hover { transform: translateY(-4px); }
-.info-icon { font-size: 32px; margin-bottom: 8px; }
-.info-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
-.info-text { font-size: 13px; opacity: 0.92; line-height: 1.5; }
-
-.story-card {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 16px;
-    padding: 18px;
-    height: 100%;
-}
-.story-avatar {
-    font-size: 40px;
-    display: inline-block;
-    background: rgba(255,255,255,0.08);
-    border-radius: 50%;
-    width: 64px; height: 64px;
-    line-height: 64px;
-    text-align: center;
-    margin-bottom: 10px;
-}
-.story-name { font-weight: 700; font-size: 16px; margin-bottom: 2px; }
-.story-tag {
-    display: inline-block;
-    background: rgba(38, 224, 201, 0.15);
-    color: #26e0c9;
-    font-size: 11px;
-    padding: 3px 10px;
-    border-radius: 20px;
-    margin-bottom: 10px;
-}
-.story-text { font-size: 13px; color: #dcdcdc; line-height: 1.6; }
-.illustrative-note {
-    font-size: 12px;
-    color: #9aa5b1;
-    font-style: italic;
-    margin-top: 6px;
-}
-
-@media (max-width: 800px) {
-    .hero-title { font-size: 29px; }
-    .hero-card { padding: 22px 20px; }
-    .kpi-card { min-height: 112px; }
-}
-</style>
-""", unsafe_allow_html=True)
-
-# Render the floating particle layer - varied colors/sizes/speeds for a "live" feel
-import random as _bg_random
-_bg_random.seed(7)
-_particle_colors = ["#ff5c7a", "#ff9a5a", "#3ab0ff", "#26e0c9", "#a86bff", "#ff6ab3"]
-_particles_html = ""
-for i in range(14):
-    size = _bg_random.randint(30, 90)
-    top = _bg_random.randint(0, 95)
-    left = _bg_random.randint(0, 95)
-    color = _bg_random.choice(_particle_colors)
-    duration = _bg_random.uniform(10, 22)
-    delay = _bg_random.uniform(0, 8)
-    _particles_html += f"""<div class="cell-particle" style="
-        width:{size}px; height:{size}px; top:{top}%; left:{left}%;
-        background:{color}; animation-duration:{duration:.1f}s; animation-delay:{delay:.1f}s;
-    "></div>"""
-st.markdown(_particles_html, unsafe_allow_html=True)
+apply_theme()
 
 if select_module() == "pbs":
     from pbs_page import render_pbs
@@ -482,39 +200,18 @@ RECOMMENDATIONS = {
 
 
 # ================= TABS =================
-tab1, tab2 = st.tabs(["\U0001F4CA Model Dashboard", "\U0001F4DA Learn About Anemia"])
+tab1, tab2 = st.tabs(["Model dashboard", "Learn about anaemia"])
 
 with tab1:
     # ================= HEADER =================
-    _duhs_logo_path = os.path.join(os.path.dirname(__file__), "duhs_logo.png")
-    _duhs_logo_html = ""
-    if os.path.exists(_duhs_logo_path):
-        with open(_duhs_logo_path, "rb") as _f:
-            _duhs_b64 = base64.b64encode(_f.read()).decode()
-        _duhs_logo_html = f"""
-                <div class="hero-logo-wrap">
-                    <img class="hero-logo-img" src="data:image/png;base64,{_duhs_b64}" />
-                    <div class="hero-logo-caption">Under the supervision of<br/>Professors of D.U.H.S</div>
-                </div>"""
-
-    st.markdown(f"""
-        <div class="hero-card">
-            <div class="hero-content">
-                <div class="hero-eyebrow">AI-ASSISTED RBC IMAGE ANALYSIS</div>
-                <div class="hero-title">\U0001FA78 AnemiaSense <span>Model Dashboard</span></div>
-                <div class="hero-subtitle">
-                    Explore held-out model performance, understand every metric, and inspect a new
-                    RGB-segmented blood-cell image. Educational research interface - not a diagnosis.
-                </div>
-                <div class="chip-row">
-                    <span class="status-chip">\u2713 Held-out test set</span>
-                    <span class="status-chip">{len(all_labels)} test images</span>
-                    <span class="status-chip">{len(class_names)} balanced classes</span>
-                    <span class="status-chip">Threshold {best_threshold:.2f}</span>
-                </div>
-            </div>{_duhs_logo_html}
-        </div>
-    """, unsafe_allow_html=True)
+    render_hero(
+        "Read the cells.\nExplore the evidence.",
+        "Explore red blood cell images, understand model performance, and inspect "
+        "every prediction in one research workspace.",
+        eyebrow="ANAEMIA · IMAGE ANALYSIS",
+        tags=["Held-out evaluation", f"{len(all_labels):,} test images", "ResNet-34"],
+        anchor="model-performance", accent="cells",
+    )
 
     display_class_names = [name.replace("_individuals", "") for name in class_names]
     report_dict = classification_report(
@@ -524,59 +221,48 @@ with tab1:
     auc_score = roc_auc_score(all_labels, all_probs[:, 1]) if len(class_names) == 2 else None
 
     # ================= KPI CARDS =================
-    kpi_defs = [
-        ("\U0001F3AF", "Test Accuracy", f"{overall_acc:.1%}", "linear-gradient(135deg,#0f9b8e,#0c6e64)",
-         "Correct predictions out of all test images."),
-        ("\U0001F50E", "Precision (macro)", f"{report_dict['macro avg']['precision']:.1%}", "linear-gradient(135deg,#1f77b4,#154a73)",
-         "When the model predicts a class, how often it is right."),
-        ("\U0001F4E1", "Recall (macro)", f"{report_dict['macro avg']['recall']:.1%}", "linear-gradient(135deg,#d97732,#8f431b)",
-         "How many real cases of each class the model finds."),
-        ("\u2696\ufe0f", "F1-score (macro)", f"{report_dict['macro avg']['f1-score']:.1%}", "linear-gradient(135deg,#8e44ad,#5b2c6f)",
-         "The balance between precision and recall."),
-        ("\U0001F4C8", "ROC-AUC", f"{auc_score:.3f}" if auc_score is not None else "-", "linear-gradient(135deg,#334155,#172033)",
-         "Ranking quality across all possible thresholds."),
-        ("\U0001F39A\ufe0f", "Decision Threshold", f"{best_threshold:.2f}", "linear-gradient(135deg,#b7354a,#712335)",
-         "Probability cutoff selected on validation data."),
-    ]
-    for row_start in range(0, len(kpi_defs), 3):
-        kpi_cols = st.columns(3)
-        for col, (icon, label, value, grad, tip) in zip(kpi_cols, kpi_defs[row_start:row_start + 3]):
-            col.markdown(f"""
-                <div class="kpi-card" style="background:{grad};" title="{tip}">
-                    <div class="kpi-icon">{icon}</div>
-                    <div class="kpi-value">{value}</div>
-                    <div class="kpi-label">{label}</div>
-                    <div class="kpi-tip">{tip}</div>
-                </div>
-            """, unsafe_allow_html=True)
-        st.write("")
+    section_heading("01 / MODEL PERFORMANCE", "The numbers behind the model.",
+                    "Held-out test results. Scroll to explore each measure.", anchor="model-performance")
+    metric_grid([
+        {"label": "Test accuracy", "value": overall_acc * 100, "decimals": 1, "suffix": "%",
+         "note": "Correct predictions across all test images.", "featured": True},
+        {"label": "Macro precision", "value": report_dict['macro avg']['precision'] * 100,
+         "decimals": 1, "suffix": "%", "note": "How often a predicted class is correct."},
+        {"label": "Macro recall", "value": report_dict['macro avg']['recall'] * 100,
+         "decimals": 1, "suffix": "%", "note": "How many cases of each class are found."},
+        {"label": "Macro F1", "value": report_dict['macro avg']['f1-score'] * 100,
+         "decimals": 1, "suffix": "%", "note": "The balance of precision and recall."},
+        {"label": "ROC–AUC", "value": auc_score, "decimals": 3,
+         "note": "Ranking quality across probability cutoffs."},
+        {"label": "Decision threshold", "value": best_threshold, "decimals": 2,
+         "note": "Probability cutoff selected on validation data."},
+    ], key="anemia_performance")
+    section_heading("02 / TRAINING & EVALUATION", "Go beyond a single score.",
+                    "Explore learning curves, class performance, and prediction errors.")
 
     # ================= CHARTS =================
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         epochs_list = list(range(1, len(train_losses) + 1))
         fig_train = go.Figure()
         fig_train.add_trace(go.Scatter(x=epochs_list, y=train_losses, mode="lines+markers",
-                                        name="Train Loss", line=dict(color="#ff9a5a")))
+                                        name="Train Loss", line=dict(color="#b92842")))
         fig_train.add_trace(go.Scatter(x=epochs_list, y=val_losses, mode="lines+markers",
-                                        name="Val Loss", line=dict(color="#3ab0ff")))
+                                        name="Val Loss", line=dict(color="#d5827b")))
         fig_train.add_trace(go.Scatter(x=epochs_list, y=[a / 100 for a in val_accuracies], mode="lines+markers",
-                                        name="Val Accuracy (scaled)", line=dict(color="#26e0c9", dash="dot"),
+                                        name="Val Accuracy (scaled)", line=dict(color="#603943", dash="dot"),
                                         yaxis="y2"))
         fig_train.update_layout(
             title="Training Loss & Validation Accuracy",
-            template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+            template="plotly_white", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
             xaxis=dict(title="Epoch"), yaxis=dict(title="Loss"),
             yaxis2=dict(title="Val Accuracy", overlaying="y", side="right", range=[0, 1]),
             legend=dict(orientation="h", y=-0.25), height=360,
         )
         st.plotly_chart(fig_train, width="stretch")
-        st.markdown('</div>', unsafe_allow_html=True)
 
     with col2:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         metrics_rows = []
         for cls, display_cls in zip(class_names, display_class_names):
             metrics_rows.append({"class": display_cls, "metric": "Precision", "value": report_dict[cls]["precision"]})
@@ -585,8 +271,8 @@ with tab1:
         metrics_df = pd.DataFrame(metrics_rows)
         fig_prf = px.bar(
             metrics_df, x="class", y="value", color="metric", barmode="group", text_auto=".2%",
-            template="plotly_dark", title="Precision / Recall / F1-score per class",
-            color_discrete_map={"Precision": "#3ab0ff", "Recall": "#ff9a5a", "F1-score": "#26e0c9"},
+            template="plotly_white", title="Precision / Recall / F1-score per class",
+            color_discrete_map={"Precision": "#d5827b", "Recall": "#b92842", "F1-score": "#603943"},
         )
         fig_prf.update_layout(
             yaxis=dict(range=[0, 1], title="Score"), xaxis_title="", height=360,
@@ -594,13 +280,11 @@ with tab1:
         )
         st.plotly_chart(fig_prf, width="stretch")
         st.caption("Precision = few false alarms. Recall = few missed cases. F1 = balance of both. Higher bars = better.")
-        st.markdown('</div>', unsafe_allow_html=True)
 
     # ================= CONFUSION MATRIX + INTERACTIVE METRIC LAB =================
     cm_col, guide_col = st.columns([1.08, 0.92], gap="large")
 
     with cm_col:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown("### \U0001F9ED Confusion Matrix")
         cm_view = st.radio(
             "Confusion matrix view", ("Counts", "Row percentages"),
@@ -625,7 +309,7 @@ with tab1:
 
         fig_cm = px.imshow(
             cm_display, text_auto=text_format, x=display_class_names, y=display_class_names,
-            color_continuous_scale="Teal", template="plotly_dark",
+            color_continuous_scale="Reds", template="plotly_white",
             labels=dict(x="Predicted", y="Actual", color=color_title),
             aspect="auto",
         )
@@ -644,10 +328,8 @@ with tab1:
         st.caption(
             "Read across each row: the diagonal cells are correct predictions; off-diagonal cells are mistakes."
         )
-        st.markdown('</div>', unsafe_allow_html=True)
 
     with guide_col:
-        st.markdown('<div class="section-card">', unsafe_allow_html=True)
         st.markdown("### \U0001F9E0 Interactive Metric Guide")
         st.caption("Pick a metric to see what it means and how to read the current value.")
 
@@ -752,10 +434,10 @@ with tab1:
                 curve_df = pd.DataFrame(curve_rows)
                 fig_curve = px.line(
                     curve_df, x="Threshold", y="Score", color="Metric",
-                    template="plotly_dark", color_discrete_sequence=["#5eead4", "#60a5fa", "#fb923c", "#c084fc"],
+                    template="plotly_white", color_discrete_sequence=["#bb2943", "#d5827b", "#93626b", "#5e3943"],
                 )
-                fig_curve.add_vline(x=best_threshold, line_dash="dash", line_color="#f8fafc")
-                fig_curve.add_vline(x=demo_threshold, line_dash="dot", line_color="#fb7185")
+                fig_curve.add_vline(x=best_threshold, line_dash="dash", line_color="#40282f")
+                fig_curve.add_vline(x=demo_threshold, line_dash="dot", line_color="#db5268")
                 fig_curve.update_layout(
                     height=280, yaxis=dict(range=[0, 1]), margin=dict(l=0, r=0, t=10, b=0),
                     paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
@@ -765,11 +447,9 @@ with tab1:
                 st.caption("Dashed = official threshold; dotted pink = slider threshold.")
         else:
             st.info("Run the calibration/threshold cell, then re-save dashboard artifacts to enable this playground.")
-        st.markdown('</div>', unsafe_allow_html=True)
 
     # ================= UPLOAD + PREDICT =================
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
-    st.markdown("### \U0001F4E4 Prediction Studio")
+    section_heading("03 / PREDICTION STUDIO", "From image to insight.", "Upload a segmented blood cell image to explore the model’s prediction.")
     st.caption("Upload one RGB_segmented-style image - color preserved, background removed - to inspect the model's result.")
     st.markdown("""
         <div class="chip-row">
@@ -852,50 +532,24 @@ with tab1:
             field_mae = reg_meta["field_mae"]
             field_r2 = reg_meta["field_r2"]
 
-            # Same colorful card language as the KPI section up top - one
-            # signature gradient + icon per CBC field, so this panel reads
-            # as part of the same visual system instead of a flat gray afterthought.
-            # Punchier, more saturated 3-stop gradients (with a matching glow
-            # color) so this panel pops the same way the KPI cards up top do.
-            CBC_STYLE = {
-                "Hemoglobin": ("\U0001FA78", "linear-gradient(135deg,#00e0b8,#00997a,#046e5a)", "#00e0b8", "g/dL \u00b7 oxygen-carrying protein in red cells"),
-                "RBC":        ("\U0001F534", "linear-gradient(135deg,#3aa0ff,#1f77b4,#0d4a80)", "#3aa0ff", "million/\u00b5L \u00b7 red blood cell count"),
-                "WBC":        ("\U0001F6E1\ufe0f", "linear-gradient(135deg,#ffb14e,#e2792b,#8f431b)", "#ffb14e", "thousand/\u00b5L \u00b7 white blood cell (immune) count"),
-                "Hematocrit": ("\U0001F4A7", "linear-gradient(135deg,#c084fc,#9b3dd1,#5b2c6f)", "#c084fc", "% \u00b7 blood volume made up of red cells"),
-                "Platelets":  ("\U0001F9EB", "linear-gradient(135deg,#ff5c9e,#c2185b,#6a1b3d)", "#ff5c9e", "thousand/\u00b5L \u00b7 cell fragments that help clotting"),
-                "MCV":        ("\U0001F4CF", "linear-gradient(135deg,#5b8dff,#2563eb,#1e3a8a)", "#5b8dff", "fL \u00b7 average size of a single red blood cell"),
-                "MCH":        ("\U0001F9EC", "linear-gradient(135deg,#7dd3fc,#334155,#172033)", "#7dd3fc", "pg \u00b7 average hemoglobin per red blood cell"),
-                "MCHC":       ("\u2696\ufe0f", "linear-gradient(135deg,#ff6a88,#b7354a,#712335)", "#ff6a88", "g/dL \u00b7 hemoglobin concentration in red cells"),
-                "RDW-CV":     ("\U0001F4CA", "linear-gradient(135deg,#4ade80,#16a34a,#166534)", "#4ade80", "% \u00b7 variation in red blood cell size"),
-                "MPV":        ("\U0001F52C", "linear-gradient(135deg,#fbbf24,#ca8a04,#78350f)", "#fbbf24", "fL \u00b7 average platelet size"),
+            units = {
+                "Hemoglobin": "g/dL", "RBC": "million/µL", "WBC": "thousand/µL",
+                "Hematocrit": "%", "Platelets": "thousand/µL", "MCV": "fL",
+                "MCH": "pg", "MCHC": "g/dL", "RDW-CV": "%", "MPV": "fL",
             }
-            DEFAULT_STYLE = ("\U0001F9EA", "linear-gradient(135deg,#64748b,#475569,#1e293b)", "#94a3b8", "")
-
-            for row_start in range(0, len(target_fields), 3):
-                cbc_cols = st.columns(3)
-                for col, f in zip(cbc_cols, target_fields[row_start:row_start + 3]):
-                    value = reg_out[target_fields.index(f)] * field_std[f] + field_mean[f]
-                    mae = field_mae.get(f, None)
-                    r2 = field_r2.get(f, None)
-                    reliable = r2 is not None and r2 > 0.3
-                    icon, grad, glow, unit_note = CBC_STYLE.get(f, DEFAULT_STYLE)
-                    mae_text = f"\u00b1{mae:.2f}" if mae is not None else "?"
-                    badge_html = (
-                        '<span class="kpi-badge ok">\u2705 usable</span>' if reliable
-                        else '<span class="kpi-badge warn">\u26a0\ufe0f low confidence</span>'
-                    )
-                    card_class = "kpi-card" + ("" if reliable else " kpi-card-muted")
-                    shadow = f"0 6px 22px {glow}55" if reliable else "0 4px 14px rgba(0,0,0,0.35)"
-                    tip = f"{unit_note}. Typical error \u00b1{mae:.2f} on held-out test data (R\u00b2={r2:.2f})." if mae is not None and r2 is not None else unit_note
-                    col.markdown(f"""
-                        <div class="{card_class}" style="background:{grad}; box-shadow:{shadow};" title="{tip}">
-                            <div class="kpi-icon">{icon}</div>
-                            <div class="kpi-value">{value:.1f}<span class="kpi-margin">{mae_text}</span></div>
-                            <div class="kpi-label">{f}</div>
-                            {badge_html}
-                        </div>
-                    """, unsafe_allow_html=True)
-                st.write("")
+            cbc_metrics = []
+            for index, field in enumerate(target_fields):
+                value = reg_out[index] * field_std[field] + field_mean[field]
+                mae = field_mae.get(field)
+                r2 = field_r2.get(field)
+                confidence_note = "" if r2 is not None and r2 > 0.3 else "Low confidence. "
+                error_note = f"Typical error ±{mae:.2f}. " if mae is not None else ""
+                r2_note = f"Held-out R² {r2:.2f}." if r2 is not None else ""
+                cbc_metrics.append({
+                    "label": f"{field} · {units.get(field, '')}", "value": float(value), "decimals": 1,
+                    "note": f"{confidence_note}{error_note}{r2_note}",
+                })
+            metric_grid(cbc_metrics, key="estimated_cbc")
             st.markdown(
                 "<div class='illustrative-note'>Values with 'low confidence' mean the model doesn't actually "
                 "track that parameter well (measured on real held-out test data) - treat those as unreliable "
@@ -906,11 +560,9 @@ with tab1:
         rec_html = "".join(f"<li>{r}</li>" for r in RECOMMENDATIONS[predicted_label])
         st.markdown(f'<ul class="rec-list">{rec_html}</ul>', unsafe_allow_html=True)
 
-    st.markdown('</div>', unsafe_allow_html=True)
 
 with tab2:
 
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown("### What is Anemia?")
     ic1, ic2, ic3, ic4 = st.columns(4)
     info_cards = [
@@ -935,9 +587,7 @@ with tab2:
                 <div class="info-text">{text}</div>
             </div>
         """, unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown("### Recovery Journeys")
     st.markdown('<div class="illustrative-note">Illustrative, composite stories for educational purposes - not real documented case histories.</div>', unsafe_allow_html=True)
     st.write("")
@@ -963,9 +613,7 @@ with tab2:
                 <div class="story-text">{text}</div>
             </div>
         """, unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="section-card">', unsafe_allow_html=True)
     st.markdown("### Frequently Asked Questions")
 
     faqs = [
@@ -993,4 +641,3 @@ with tab2:
     for q, a in faqs:
         with st.expander(q):
             st.write(a)
-    st.markdown('</div>', unsafe_allow_html=True)

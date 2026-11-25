@@ -8,6 +8,8 @@ import cv2
 import pandas as pd
 import streamlit as st
 
+from ui import render_hero, metric_grid, section_heading
+
 from pbs import CELL_TYPES, COLORS, classify_cells, decode_image, load_morphology_model, segment_smear
 
 SAMPLE = Path(__file__).resolve().parent / "dashboard_data" / "pbs_example.jpg"
@@ -20,13 +22,28 @@ def get_classifier():
 
 
 def render_pbs():
-    st.markdown("""
-        <div class="hero-card">
-            <h1 class="hero-title">Thalassemia <span>PBS</span></h1>
-            <p class="hero-subtitle">Analyse a peripheral blood smear and review the
-            predicted morphology of individual red blood cells.</p>
-        </div>
-    """, unsafe_allow_html=True)
+    render_hero("See the field.\nRead every cell.",
+                "Explore a whole microscope field, see candidate cells in context, and review their predicted morphology.",
+                eyebrow="THALASSEMIA · PERIPHERAL BLOOD SMEAR",
+                tags=["9 morphology classes", "1000× microscope field", "Cell-by-cell review"],
+                anchor="pbs-performance", accent="field")
+    section_heading("01 / MODEL PERFORMANCE", "A transparent starting point.",
+                    "Evaluation on held-out labelled cell crops, before analysing your field.", anchor="pbs-performance")
+    try:
+        _, evaluation = get_classifier()
+        metric_grid([
+            {"label": "Balanced accuracy", "value": evaluation["balanced_accuracy"] * 100,
+             "decimals": 1, "suffix": "%", "note": "Average recall across morphology classes.", "featured": True},
+            {"label": "Macro F1", "value": evaluation["macro_f1"], "decimals": 3,
+             "note": "Equal weight given to each morphology class."},
+            {"label": "Held-out crops", "value": evaluation["test_crops"],
+             "note": f"From {evaluation['test_fields']:,} held-out microscope fields."},
+        ], key="pbs_evaluation")
+        st.caption("Crop-level evaluation. Segmentation accuracy and performance on unseen patients have not been established.")
+    except FileNotFoundError:
+        st.info("Add the PBS classifier checkpoint to display its saved evaluation.")
+    section_heading("02 / SMEAR STUDIO", "Bring the whole picture into focus.",
+                    "Try the published example or upload your own peripheral blood smear.")
     st.info("Research use only. This workflow reports red blood cell morphology. "
             "Thalassemia diagnosis requires clinical assessment and laboratory testing.")
 
@@ -75,6 +92,11 @@ def render_pbs():
 
     if result is not None:
         render_results(*result[1:])
+    else:
+        try:
+            st.image(decode_image(data), caption="Source smear · Ready for analysis", width="stretch")
+        except ValueError as error:
+            st.error(str(error))
 
 
 def render_results(working, green, cells, predictions, evaluation):
@@ -95,7 +117,14 @@ def render_results(working, green, cells, predictions, evaluation):
             "X": x, "Y": y, "Width": width, "Height": height,
         })
 
-    st.subheader("Smear analysis")
+    section_heading("03 / FIELD RESULTS", "Your field, cell by cell.",
+                    "Review candidate morphology and the cells that need a closer look.")
+    uncertain_count = sum(bool(row["Review"]) for row in rows)
+    metric_grid([
+        {"label": "Candidate cells", "value": len(rows), "note": "Cells segmented in this image field.", "featured": True},
+        {"label": "Low-score candidates", "value": uncertain_count, "note": "Model score below 0.55; flagged for review."},
+        {"label": "Above review cutoff", "value": len(rows) - uncertain_count, "note": "Score at least 0.55; predictions remain uncalibrated."},
+    ], key="pbs_field_results")
     original, annotated = st.columns(2)
     original.image(working, caption="Smear at analysis resolution", width="stretch")
     annotated.image(overlay, caption="Candidate cells numbered for review", width="stretch")
@@ -104,9 +133,6 @@ def render_results(working, green, cells, predictions, evaluation):
 
     counts = Counter(row["Predicted morphology"] for row in rows if not row["Review"])
     uncertain_count = sum(bool(row["Review"]) for row in rows)
-    left, right = st.columns(2)
-    left.metric("Candidate cells", len(rows))
-    right.metric("Low-score candidates", uncertain_count)
     st.caption("Low-score candidates are flagged for review and counted separately. "
                "Model scores are uncalibrated. Counts describe this image field only.")
     distribution = pd.DataFrame({

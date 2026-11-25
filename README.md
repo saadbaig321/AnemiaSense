@@ -7,6 +7,40 @@ AnemiaSense is a Streamlit research app with two image analysis modules.
 | Anaemia | Colour image with the RBC background removed, in the aneRBC format | Existing classifier, Grad-CAM, approximate CBC estimates and model dashboard |
 | Thalassemia PBS | Full peripheral blood smear microscope field at 1000× | Segmented candidate cells, nine predicted morphology classes, low-score flags, annotated image and CSV |
 
+## Updated interface
+
+The interface takes visual inspiration from [Locus — Genetic Testing Website Design by Yscale Studio](https://dribbble.com/shots/27854580-Locus-Genetic-Testing-Website-Design), adapted to AnemiaSense. It uses warm ivory backgrounds, bold black headings, crimson emphasis and buttons, original glossy blood-cell artwork, a slim navigation bar, and responsive metric grids. The home screen includes a compact overview strip, an editorial research section, red and white module cards, and a dark three-step workflow section.
+
+- **Home and sign-in:** shared branding, redesigned module selection, and the existing authentication flow.
+- **Anaemia:** six animated held-out metrics, charts in a matching crimson palette, the existing threshold playground, prediction/Grad-CAM workflow, and animated CBC estimates with measured errors.
+- **Thalassemia PBS:** saved evaluation metrics on entry, source image preview, and animated field statistics after analysis. Existing candidate review and CSV export remain available.
+- **Motion:** metric panels reveal and count up once they enter the viewport. Charts and supporting panels fade upward on scroll. Values use the saved evaluation or actual analysis result; animation does not change calculations.
+- **Accessibility:** reduced-motion preferences disable movement and show final values immediately. Screen readers receive the final metric values without announcing every animation frame. Cards adapt from three to two to one column.
+
+### Frontend files
+
+| File | Purpose |
+| --- | --- |
+| `ui/__init__.py` | Shared hero, branding, section headings, and Streamlit v2 components |
+| `ui/styles.css` | App-wide styling and responsive layouts |
+| `ui/metrics.css` | Isolated metric-card styling |
+| `ui/metrics.js` | Viewport observation, number animation, and cleanup |
+| `ui/motion.js` | Scroll reveals for native Streamlit output |
+| `ui/assets/blood-cells-hero.webp` | Original decorative blood-cell artwork |
+| `.streamlit/config.toml` | Matching theme for native widgets |
+
+No Node build step is required. CSS, JavaScript, artwork, and branding are bundled locally. The decorative artwork is packaged as a compact WebP; it is not used as model input. Keep the pinned Streamlit version: the animation components use its v2 component API. All model checkpoints and inference code are retained.
+
+## Upgrade the existing Streamlit app
+
+This project can replace the anaemia-only `main` branch of `saadbaig321/AnemiaSense`. The repository also has a `fyp-ii-thalassemia-pbs` branch containing the earlier two-module project. The redesigned interface is in this update package.
+
+1. Confirm which branch your existing Streamlit deployment uses. If it uses `main`, upload the update package's extracted files into that branch's repository root, alongside the existing `app.py`.
+2. Preserve the folder structure, including `ui/`, `.streamlit/`, and the two new PBS files in `dashboard_data/`. Existing anaemia checkpoints are unchanged and can remain in the repository.
+3. Commit the complete update together, including `requirements.txt`. The older repository pins Streamlit 1.39.0; the updated interface requires the bundled Streamlit 1.67.0 dependency.
+4. Keep the existing deployment's repository, branch, and `app.py` entry point. Streamlit then rebuilds that app using the updated source.
+5. The updated project includes sign-in. Configure the OpenID Connect settings in Streamlit secrets as described below if they are not already configured. The local demo environment variable is intended for local demonstrations.
+
 ## Run locally
 
 Use Python 3.11 or 3.12.
