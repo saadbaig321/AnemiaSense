@@ -57,3 +57,16 @@ a:focus-visible,button:focus-visible {outline:3px solid #ba2945!important;outlin
 @media(max-width:760px){.block-container{padding:1rem 1.1rem 3rem}.as-brand-row{gap:12px;padding:10px 0 18px;flex-wrap:wrap}.as-brand{font-size:21px}.as-nav{order:3;width:100%;justify-content:center;gap:30px;padding:9px}.as-institution{font-size:8px;padding:4px 10px}.as-institution img{width:24px;height:29px}.as-hero{min-height:620px;padding:30px 22px 220px;align-items:flex-start}.as-hero-art{object-position:65% center}.as-hero:before{background:linear-gradient(180deg,#faf6f3f5 0,#faf6f3e6 35%,#faf6f361 65%,transparent)}.as-hero-copy{width:100%}.as-hero h1{font-size:clamp(42px,8.5vw,62px);margin:23px 0 20px;max-width:600px}.as-hero-copy>p{font-size:12px;max-width:380px}.as-research-note{left:22px;bottom:15px;font-size:8px;background:#faf6f3b8;padding:6px 8px;width:fit-content;border-radius:4px}.as-tags{gap:10px;margin-top:20px}.as-tags span{font-size:8px}.as-section{padding-top:35px;display:block}.as-section h2{font-size:34px}.as-section>p{margin-top:16px;max-width:100%}.as-about{grid-template-columns:1fr;gap:28px;margin:40px 0 10px}.as-about-art{height:290px}.as-about-copy h2{font-size:32px}.as-about-copy>p{max-width:100%}.as-module-card{padding:24px;min-height:300px}.as-module-card h3{font-size:28px}.as-workflow{margin-top:40px;padding:28px 24px;gap:20px}.as-workflow ol{grid-template-columns:1fr;gap:20px}.as-workflow li{padding-top:15px}.as-workflow li h3{margin:10px 0!important}.as-workflow li p{margin-bottom:0}.as-footer{flex-direction:column;gap:8px}}
 @media(max-width:400px){.as-brand{font-size:20px}.as-hero{padding-left:18px;padding-right:18px}.as-hero h1{font-size:43px}.as-institution span{display:none}.as-brand-mark{width:26px;font-size:29px}.as-section h2{font-size:31px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*,*:before,*:after{animation:none!important;transition:none!important}.as-reveal-ready{opacity:1;transform:none}}
+/* Improve form-label and caption contrast */
+[data-testid="stWidgetLabel"],
+[data-testid="stWidgetLabel"] p,
+[data-testid="stRadio"] label,
+[data-testid="stRadio"] label p,
+[data-testid="stRadio"] label span {
+    color: #30252b !important;
+}
+
+[data-testid="stCaptionContainer"],
+[data-testid="stCaptionContainer"] p {
+    color: #625157 !important;
+}
